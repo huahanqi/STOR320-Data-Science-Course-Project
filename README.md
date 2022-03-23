@@ -7,6 +7,9 @@ According to the U.S. News’ 10 Most Congested Cities Report, New York City, Ne
 
 When contemplating this interest in New York City traffic accidents, we began to wonder how high injury rates are in the area. Furthermore, we began to wonder if traffic could be managed in a way that reduced the possibility of injury or death from an accident. If we could find a pattern among the factors involved in the most deadly accidents, we could understand the most dangerous risk factors for vehicle travel in New York City. This could be further applied to our lives through considering how those factors may be similar in cities closer to us, such as Raleigh, Durham, or Chapel Hill.
 
+## Question
+In New York City, will certain vehicle passengers have a higher chance of being killed or injured given the time, location, contributing factors, and vehicle types involved in the traffic accident?
+
 ## DataSet: 
 The data that is used in this analysis is the NYC Traffic Accidents dataset on Kaggle. The data was collected by the New York City Police Department from January - August of 2020. We use many variables from this data to help with our analysis. The variables we used from this data are: Number of Persons Injured, Number of Persons Killed, Hour, Month, Longitude, Latitude, Contributing Factors 1-5 and Vehicle Type Code 1-5.
 
