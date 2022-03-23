@@ -1,0 +1,1149 @@
+---
+title: "Final Project STOR 320 Group1"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readr)
+library(hms)
+library(Stat2Data)
+library(ggrepel)
+library(forcats)
+library(scales)
+library(dplyr)
+library(binr)
+library(tidyr)
+library(lubridate)
+library(modelr)
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering algorithms & visualization
+
+# Import Data Below
+nycaccidents <- read_csv("./NYC\ Accidents\ 2020.csv")
+
+```
+
+Data Cleaning (renaming and prepossessing)
+```{r}
+nycaccidents_clean = nycaccidents %>% 
+  rename(NUMBER.OF.PERSONS.INJURED = "NUMBER OF PERSONS INJURED", 
+                       NUMBER.OF.PERSONS.KILLED = "NUMBER OF PERSONS KILLED",
+                       NUMBER.OF.PEDESTRIANS.INJURED = "NUMBER OF PEDESTRIANS INJURED",
+                       NUMBER.OF.PEDESTRIANS.KILLED = "NUMBER OF PEDESTRIANS KILLED",
+                       NUMBER.OF.CYCLIST.INJURED = "NUMBER OF CYCLIST INJURED",
+                       NUMBER.OF.CYCLIST.KILLED = "NUMBER OF CYCLIST KILLED",
+                       NUMBER.OF.MOTORIST.KILLED = "NUMBER OF MOTORIST KILLED",
+                       NUMBER.OF.MOTORIST.INJURED = "NUMBER OF MOTORIST INJURED",
+                       CRASH.DATE = "CRASH DATE",
+                       CRASH.TIME = "CRASH TIME",
+                       CONTRIBUTING.FACTOR.VEHICLE.1 = "CONTRIBUTING FACTOR VEHICLE 1",
+                       CONTRIBUTING.FACTOR.VEHICLE.2 = "CONTRIBUTING FACTOR VEHICLE 2",
+                       CONTRIBUTING.FACTOR.VEHICLE.3 = "CONTRIBUTING FACTOR VEHICLE 3",
+                       CONTRIBUTING.FACTOR.VEHICLE.4 = "CONTRIBUTING FACTOR VEHICLE 4",
+                       CONTRIBUTING.FACTOR.VEHICLE.5 = "CONTRIBUTING FACTOR VEHICLE 5",
+                       VEHICLE.TYPE.CODE.1 = "VEHICLE TYPE CODE 1",
+                      VEHICLE.TYPE.CODE.2 = "VEHICLE TYPE CODE 2",
+                      VEHICLE.TYPE.CODE.3 = "VEHICLE TYPE CODE 3",
+                      VEHICLE.TYPE.CODE.4 = "VEHICLE TYPE CODE 4",
+                      VEHICLE.TYPE.CODE.5 = "VEHICLE TYPE CODE 5"
+                       ) %>% 
+  separate("CRASH.TIME", c("HOUR","MINUTES","SECONDS"), sep=":",convert = T) %>% 
+  separate("CRASH.DATE", c("YEAR","MONTH","DAY"), sep="-",convert = T)
+```
+
+see the distribution of the CONTRIBUTING.FACTOR.VEHICLE.1
+```{r}
+table(nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.1)
+```
+This seems to be reasonable.
+
+
+see the distribution of the VEHICLE.TYPE.CODE.1
+```{r}
+table(nycaccidents$`VEHICLE TYPE CODE 1`)
+length(unique(nycaccidents$`VEHICLE TYPE CODE 1`))
+```
+
+
+
+
+
+```{r}
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "2 dr sedan", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "3-Door", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "4 dr sedan", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "2 dr sedan", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "3-Door", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "4 dr sedan", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "2 dr sedan", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "3-Door", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "4 dr sedan", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "2 dr sedan", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "3-Door", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "4 dr sedan", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "2 dr sedan", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "3-Door", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "4 dr sedan", "Sedan", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+
+
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "AMBU", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "ambu", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "ambulance", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "AMBULANCE", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "AMBULENCE", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Armored Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Beverage Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "box Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Box Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "BOX TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Cargo Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "CARGO VAN", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "DELIVERY", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "D/V WB", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "DELIVERY T", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "delivery v", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "DELIVERY V", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Delv", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "DELV", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "delviery", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "delevery t", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "DIRT BIKE", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "DUMP", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "dump truck", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Dump truck", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "E bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "E-Bik", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "E-Bik", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "E-bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "E-Bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "E-BIKE", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY #226", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Fdny ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY Ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY AMBUL", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY EMT", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY Engin", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY ENGIN", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY fire", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY Fire", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY FIRE", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY FIRET", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY LADDE", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FDNY TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "fire truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Fire truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Fire Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FIRE TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Firetruck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FIRETRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Flat Rack", "Flat Bed", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "FLATBED", "Flat Bed", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "MAIL TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Minibike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Minicycle", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "moped", "Moped", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "MOPED", "Moped", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "MOTOR SCOO", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "E-Scooter", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "MOTORSCOOT", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Motorscooter", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Motorbike", "Motorcycle", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Multi-Wheeled Vehicle", "Motorcycle", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "SCOOTER", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "NYC AMBULA", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "pick", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Pick up", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "PICK UP", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Pick up Tr", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "PICK UP TR", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "PICK-UP TR", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Pick-up Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "PICKUP TRU", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "postal tru", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "POSTAL TRU", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Refrigerated Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Tow", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "tow truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Tow truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Tow Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "TOW TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Tow Truck / Wrecker", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Tractor Truck Diesel", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Tractor Truck Gasoline", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "USPS TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "White ambu", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Work Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Work van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "USPS VAN", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Amb", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "AMB", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Ambulance", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Bike" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Motorcycle" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Scooter" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Moped", "Two Wheels Vehicle", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(is.na(nycaccidents_clean$VEHICLE.TYPE.CODE.1), "Missing", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+```
+
+```{r}
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "AMBU", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "ambu", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "ambulance", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "AMBULANCE", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "AMBULENCE", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Armored Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Beverage Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "box Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Box Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "BOX TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Cargo Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "CARGO VAN", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "DELIVERY", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "D/V WB", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "DELIVERY T", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "delivery v", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "DELIVERY V", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Delv", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "DELV", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "delviery", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "delevery t", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "DIRT BIKE", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "DUMP", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "dump truck", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Dump truck", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "E bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "E-Bik", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "E-Bik", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "E-bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "E-Bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "E-BIKE", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY #226", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Fdny ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY Ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY AMBUL", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY EMT", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY Engin", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY ENGIN", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY fire", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY Fire", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY FIRE", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY FIRET", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY LADDE", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FDNY TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "fire truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Fire truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Fire Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FIRE TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Firetruck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FIRETRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Flat Rack", "Flat Bed", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "FLATBED", "Flat Bed", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "MAIL TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Minibike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Minicycle", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "moped", "Moped", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "MOPED", "Moped", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "MOTOR SCOO", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "E-Scooter", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "MOTORSCOOT", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Motorscooter", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Motorbike", "Motorcycle", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Multi-Wheeled Vehicle", "Motorcycle", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "SCOOTER", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "NYC AMBULA", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "pick", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Pick up", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "PICK UP", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Pick up Tr", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "PICK UP TR", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "PICK-UP TR", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Pick-up Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "PICKUP TRU", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "postal tru", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "POSTAL TRU", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Refrigerated Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Tow", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "tow truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Tow truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Tow Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "TOW TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Tow Truck / Wrecker", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Tractor Truck Diesel", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Tractor Truck Gasoline", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "USPS TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "White ambu", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Work Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Work van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "USPS VAN", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Amb", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "AMB", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Ambulance", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Bike" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Motorcycle" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Scooter" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Moped", "Two Wheels Vehicle", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(is.na(nycaccidents_clean$VEHICLE.TYPE.CODE.2), "Missing", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+```
+
+```{r}
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "AMBU", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "ambu", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "ambulance", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "AMBULANCE", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "AMBULENCE", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Armored Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Beverage Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "box Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Box Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "BOX TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Cargo Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "CARGO VAN", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "DELIVERY", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "D/V WB", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "DELIVERY T", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "delivery v", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "DELIVERY V", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Delv", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "DELV", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "delviery", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "delevery t", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "DIRT BIKE", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "DUMP", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "dump truck", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Dump truck", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "E bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "E-Bik", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "E-Bik", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "E-bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "E-Bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "E-BIKE", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY #226", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Fdny ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY Ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY AMBUL", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY EMT", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY Engin", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY ENGIN", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY fire", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY Fire", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY FIRE", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY FIRET", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY LADDE", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FDNY TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "fire truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Fire truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Fire Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FIRE TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Firetruck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FIRETRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Flat Rack", "Flat Bed", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "FLATBED", "Flat Bed", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "MAIL TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Minibike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Minicycle", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "moped", "Moped", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "MOPED", "Moped", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "MOTOR SCOO", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "E-Scooter", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "MOTORSCOOT", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Motorscooter", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Motorbike", "Motorcycle", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Multi-Wheeled Vehicle", "Motorcycle", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "SCOOTER", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "NYC AMBULA", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "pick", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Pick up", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "PICK UP", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Pick up Tr", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "PICK UP TR", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "PICK-UP TR", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Pick-up Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "PICKUP TRU", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "postal tru", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "POSTAL TRU", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Refrigerated Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Tow", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "tow truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Tow truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Tow Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "TOW TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Tow Truck / Wrecker", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Tractor Truck Diesel", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Tractor Truck Gasoline", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "USPS TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "White ambu", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Work Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Work van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "USPS VAN", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Amb", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "AMB", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Ambulance", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Bike" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Motorcycle" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Scooter" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Moped", "Two Wheels Vehicle", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(is.na(nycaccidents_clean$VEHICLE.TYPE.CODE.3), "Missing", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+```
+
+```{r}
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "AMBU", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "ambu", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "ambulance", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "AMBULANCE", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "AMBULENCE", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Armored Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Beverage Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "box Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Box Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "BOX TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Cargo Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "CARGO VAN", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "DELIVERY", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "D/V WB", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "DELIVERY T", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "delivery v", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "DELIVERY V", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Delv", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "DELV", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "delviery", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "delevery t", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "DIRT BIKE", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "DUMP", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "dump truck", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Dump truck", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "E bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "E-Bik", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "E-Bik", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "E-bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "E-Bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "E-BIKE", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY #226", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Fdny ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY Ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY AMBUL", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY EMT", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY Engin", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY ENGIN", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY fire", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY Fire", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY FIRE", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY FIRET", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY LADDE", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FDNY TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "fire truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Fire truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Fire Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FIRE TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Firetruck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FIRETRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Flat Rack", "Flat Bed", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "FLATBED", "Flat Bed", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "MAIL TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Minibike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Minicycle", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "moped", "Moped", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "MOPED", "Moped", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "MOTOR SCOO", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "E-Scooter", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "MOTORSCOOT", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Motorscooter", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Motorbike", "Motorcycle", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Multi-Wheeled Vehicle", "Motorcycle", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "SCOOTER", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "NYC AMBULA", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "pick", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Pick up", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "PICK UP", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Pick up Tr", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "PICK UP TR", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "PICK-UP TR", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Pick-up Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "PICKUP TRU", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "postal tru", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "POSTAL TRU", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Refrigerated Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Tow", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "tow truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Tow truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Tow Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "TOW TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Tow Truck / Wrecker", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Tractor Truck Diesel", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Tractor Truck Gasoline", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "USPS TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "White ambu", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Work Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Work van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "USPS VAN", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Amb", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "AMB", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Ambulance", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Bike" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Motorcycle" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Scooter" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Moped", "Two Wheels Vehicle", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(is.na(nycaccidents_clean$VEHICLE.TYPE.CODE.4), "Missing", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+```
+
+```{r}
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "AMBU", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "ambu", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "ambulance", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "AMBULANCE", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "AMBULENCE", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Armored Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Beverage Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "box Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Box Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "BOX TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Cargo Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "CARGO VAN", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "DELIVERY", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "D/V WB", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "DELIVERY T", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "delivery v", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "DELIVERY V", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Delv", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "DELV", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "delviery", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "delevery t", "Delivery", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "DIRT BIKE", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "DUMP", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "dump truck", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Dump truck", "Dump", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "E bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "E-Bik", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "E-Bik", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "E-bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "E-Bike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "E-BIKE", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY #226", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Fdny ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY Ambul", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY AMBUL", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY EMT", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY Engin", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY ENGIN", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY fire", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY Fire", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY FIRE", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY FIRET", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY LADDE", "FDNY", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FDNY TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "fire truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Fire truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Fire Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FIRE TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Firetruck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FIRETRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Flat Rack", "Flat Bed", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "FLATBED", "Flat Bed", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "MAIL TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Minibike", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Minicycle", "Bike", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "moped", "Moped", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "MOPED", "Moped", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "MOTOR SCOO", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "E-Scooter", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "MOTORSCOOT", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Motorscooter", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Motorbike", "Motorcycle", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Multi-Wheeled Vehicle", "Motorcycle", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "SCOOTER", "Scooter", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "NYC AMBULA", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "pick", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Pick up", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "PICK UP", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Pick up Tr", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "PICK UP TR", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "PICK-UP TR", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Pick-up Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "PICKUP TRU", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "postal tru", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "POSTAL TRU", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Refrigerated Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Tow", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "tow truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Tow truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Tow Truck", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "TOW TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Tow Truck / Wrecker", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Tractor Truck Diesel", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Tractor Truck Gasoline", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "USPS TRUCK", "Truck", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "White ambu", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Work Van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Work van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "van", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "USPS VAN", "Van", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Amb", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "AMB", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Ambulance", "Ambulence", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Bike" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Motorcycle" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Scooter" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Moped", "Two Wheels Vehicle", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(is.na(nycaccidents_clean$VEHICLE.TYPE.CODE.5), "Missing", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+```
+
+
+
+```{r}
+nycaccidents_clean[which(is.na(nycaccidents_clean$VEHICLE.TYPE.CODE.1)),]
+```
+```{r}
+table(nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+```
+
+
+First check if NUMBER.OF.PERSONS.INJURED = NUMBER.OF.PEDESTRIANS.INJURED + NUMBER.OF.CYCLIST.INJURED + NUMBER.OF.MOTORIST.INJURED
+```{r}
+nycaccidents_clean$NUMBER.OF.TOTAL.INJURED = nycaccidents_clean$NUMBER.OF.PEDESTRIANS.INJURED + nycaccidents_clean$NUMBER.OF.CYCLIST.INJURED + nycaccidents_clean$NUMBER.OF.MOTORIST.INJURED
+all(nycaccidents_clean$NUMBER.OF.TOTAL.INJURED == nycaccidents_clean$NUMBER.OF.PERSONS.INJURED)
+```
+
+Do the same thing for NUMBER.OF.PERSONS.KILLED
+```{r}
+nycaccidents_clean$NUMBER.OF.TOTAL.KILLED = nycaccidents_clean$NUMBER.OF.PEDESTRIANS.KILLED + nycaccidents_clean$NUMBER.OF.CYCLIST.KILLED + nycaccidents_clean$NUMBER.OF.MOTORIST.KILLED
+all(nycaccidents_clean$NUMBER.OF.TOTAL.KILLED == nycaccidents_clean$NUMBER.OF.PERSONS.KILLED)
+```
+
+Thus, NUMBER.OF.PERSONS.INJURED/KILLED = the sum of PEDESTRIANS + CYCLIST + MOTORIST. 
+
+
+Make a col which is the sum of number of persons injured and killed
+```{r}
+nycaccidents_clean$NUMBER.OF.INJURED.AND.KILLED = nycaccidents_clean$NUMBER.OF.PERSONS.INJURED + nycaccidents_clean$NUMBER.OF.PERSONS.KILLED
+table(nycaccidents_clean$NUMBER.OF.INJURED.AND.KILLED)
+```
+
+
+Create response variable (if killed or injured = 1, neither = 0)
+```{r}
+nycaccidents_clean$INJURED.OR.KILLED = ifelse(nycaccidents_clean$NUMBER.OF.INJURED.AND.KILLED > 0, 1, 0)
+```
+
+
+See the distribution of 0 and 1
+```{r}
+table(nycaccidents_clean$INJURED.OR.KILLED)
+```
+
+
+
+```{r}
+nycaccidents_clean %>% 
+  group_by(MONTH) %>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED), number = n()) %>% 
+  arrange(desc(number))
+```
+
+```{r}
+nycaccidents_clean %>% 
+  group_by(DAY) %>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED), number = n()) %>% 
+  arrange(desc(number))
+```
+
+
+```{r}
+nycaccidents_clean %>% 
+  group_by(HOUR) %>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED), number = n()) %>% 
+  arrange(desc(number))
+```
+
+Change the NA value of contributing vector to Missing
+```{r}
+nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.1 = ifelse(is.na(nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.1), "Missing", nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.1)
+
+nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.2 = ifelse(is.na(nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.2), "Missing", nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.2)
+
+nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.3 = ifelse(is.na(nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.3), "Missing", nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.3)
+
+nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.4 = ifelse(is.na(nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.4), "Missing", nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.4)
+
+nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.5 = ifelse(is.na(nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.5), "Missing", nycaccidents_clean$CONTRIBUTING.FACTOR.VEHICLE.5)
+```
+
+Change the value of Vehicle type to TOP10 + OTHERS
+```{r}
+nycaccidents_clean$VEHICLE.TYPE.CODE.1 = ifelse(!(nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Sedan" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Station Wagon/Sport Utility Vehicle" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Truck" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Taxi" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Two Wheels Vehicle" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Bus" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Missing" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Van" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Ambulence" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Dump" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Convertible" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Flat Bed" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "PK" | nycaccidents_clean$VEHICLE.TYPE.CODE.1 == "Garbage or Refuse"), "OTHERS", nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+```
+
+```{r}
+nycaccidents_clean$VEHICLE.TYPE.CODE.2 = ifelse(!(nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Sedan" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Station Wagon/Sport Utility Vehicle" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Truck" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Taxi" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Two Wheels Vehicle" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Bus" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Missing" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Van" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Ambulence" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Dump" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Convertible" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Flat Bed" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "PK" | nycaccidents_clean$VEHICLE.TYPE.CODE.2 == "Garbage or Refuse"), "OTHERS", nycaccidents_clean$VEHICLE.TYPE.CODE.2)
+```
+
+```{r}
+nycaccidents_clean$VEHICLE.TYPE.CODE.3 = ifelse(!(nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Sedan" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Station Wagon/Sport Utility Vehicle" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Truck" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Taxi" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Two Wheels Vehicle" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Bus" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Missing" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Van" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Ambulence" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Dump" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Convertible" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Flat Bed" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "PK" | nycaccidents_clean$VEHICLE.TYPE.CODE.3 == "Garbage or Refuse"), "OTHERS", nycaccidents_clean$VEHICLE.TYPE.CODE.3)
+```
+
+```{r}
+nycaccidents_clean$VEHICLE.TYPE.CODE.4 = ifelse(!(nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Sedan" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Station Wagon/Sport Utility Vehicle" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Truck" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Taxi" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Two Wheels Vehicle" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Bus" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Missing" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Van" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Ambulence" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Dump" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Convertible" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Flat Bed" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "PK" | nycaccidents_clean$VEHICLE.TYPE.CODE.4 == "Garbage or Refuse"), "OTHERS", nycaccidents_clean$VEHICLE.TYPE.CODE.4)
+```
+
+```{r}
+nycaccidents_clean$VEHICLE.TYPE.CODE.5 = ifelse(!(nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Sedan" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Station Wagon/Sport Utility Vehicle" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Truck" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Taxi" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Two Wheels Vehicle" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Bus" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Missing" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Van" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Ambulence" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Dump" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Convertible" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Flat Bed" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "PK" | nycaccidents_clean$VEHICLE.TYPE.CODE.5 == "Garbage or Refuse"), "OTHERS", nycaccidents_clean$VEHICLE.TYPE.CODE.5)
+```
+
+```{r}
+table(nycaccidents_clean$VEHICLE.TYPE.CODE.1)
+```
+
+
+
+```{r}
+nycaccidents_clean %>% 
+  group_by(VEHICLE.TYPE.CODE.1) %>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED), number = n()) %>% 
+  arrange(desc(number))
+```
+
+```{r}
+nyc_response <- nycaccidents_clean %>% 
+  group_by(INJURED.OR.KILLED) %>% 
+  summarize(number = n()) 
+nyc_response
+ggplot(aes(x=factor(INJURED.OR.KILLED),y=number), data=nyc_response) +
+  theme_classic() +
+  geom_col(fill="light blue") +
+  xlab("Whether Injury or Death was Involved") + 
+  ylab("Frequency")
+```
+
+
+
+```{r}
+nyc_vehicle_type_draw <- nycaccidents_clean %>% 
+  group_by(VEHICLE.TYPE.CODE.1) %>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED), number = n()) %>% 
+  arrange(desc(number))
+ggplot(aes(x=VEHICLE.TYPE.CODE.1,y=number), data=nyc_vehicle_type_draw) +
+  geom_col() +
+  coord_flip()
+ggplot(aes(x=VEHICLE.TYPE.CODE.1,y=injury_rate), data=nyc_vehicle_type_draw) +
+  theme_classic() +
+  geom_col(fill="light blue") +
+  xlab("Vehicle Type") + 
+  ylab("Injury Rate") +
+  coord_flip()
+```
+
+```{r}
+nyc_factor_draw <- nycaccidents_clean %>% 
+  group_by(CONTRIBUTING.FACTOR.VEHICLE.1)%>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED), number = n()) %>% 
+  arrange(desc(number))
+ggplot(aes(x=CONTRIBUTING.FACTOR.VEHICLE.1,y=number), data=nyc_factor_draw) +
+  geom_col() +
+  coord_flip()
+ggplot(aes(x=CONTRIBUTING.FACTOR.VEHICLE.1,y=injury_rate), data=nyc_factor_draw) +
+  geom_col()  +
+  theme_classic() +
+  geom_col(fill="light blue") +
+  xlab("Contributing Factor") + 
+  ylab("Injury Rate") +
+theme(
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+```
+
+```{r}
+nyc_factor_draw <- nycaccidents_clean %>% 
+  group_by(HOUR)%>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED), number = n()) %>% 
+  arrange(desc(number))
+ggplot(aes(x=HOUR,y=number), data=nyc_factor_draw) +
+  geom_col()
+ggplot(aes(x=HOUR,y=injury_rate), data=nyc_factor_draw) +
+  theme_classic() +
+  geom_col(fill="light blue") +
+  xlab("HOUR") + 
+  ylab("Injury Rate")
+```
+
+```{r}
+nyc_factor_draw <- nycaccidents_clean %>% 
+  group_by(MONTH)%>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED), number = n()) %>% 
+  arrange(desc(number))
+ggplot(aes(x=MONTH,y=number), data=nyc_factor_draw) +
+  geom_col()
+ggplot(aes(x=factor(MONTH),y=injury_rate), data=nyc_factor_draw) +
+  theme_classic() +
+  geom_col(fill="light blue") +
+  xlab("Month") + 
+  ylab("Injury Rate")
+```
+
+
+Remove all the rows with missing value in borough and contributing factor 1. 
+
+```{r}
+nycaccidents_clean.2 = filter(nycaccidents_clean, !is.na(LOCATION))
+```
+
+```{r}
+table(nycaccidents_clean.2$INJURED.OR.KILLED)
+```
+
+```{r}
+all(!is.na(nycaccidents_clean.2$LOCATION))
+```
+
+first clean the data with erroneous data entry
+```{r}
+nycaccidents_clean.2 = nycaccidents_clean.2[nycaccidents_clean.2$LATITUDE!=0 & nycaccidents_clean.2$LONGITUDE!=0, ]
+```
+
+```{r}
+table(nycaccidents_clean.2$INJURED.OR.KILLED)
+```
+
+
+```{r}
+nycaccidents_clean.2.positive = filter(nycaccidents_clean.2, INJURED.OR.KILLED==1)
+nycaccidents_clean.2.negative = filter(nycaccidents_clean.2, INJURED.OR.KILLED==0)
+```
+
+```{r}
+ggplot()+
+  geom_point(aes(x=LONGITUDE, y=LATITUDE), data=nycaccidents_clean.2.positive,col='red',alpha=0.5)+
+  geom_point(aes(x=LONGITUDE, y=LATITUDE), data=nycaccidents_clean.2.negative,col='blue',alpha=0.5)
+```
+```{r}
+ggplot()+
+  geom_point(aes(x=LONGITUDE, y=LATITUDE), data=nycaccidents_clean.2.positive,col='red',alpha=0.5)
+```
+
+```{r}
+ggplot()+
+  geom_point(aes(x=LONGITUDE, y=LATITUDE), data=nycaccidents_clean.2.negative,col='blue',alpha=0.5)
+```
+
+
+
+Try to see if different boroughs have significantly different injury rate.
+```{r}
+nycaccidents_clean.2 %>% 
+  group_by(BOROUGH) %>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED))
+```
+SEEMS NOT VERY DIFFERENT
+
+```{r}
+table(nycaccidents_clean.2$LOCATION.CLUSTER)
+```
+
+```{r}
+table(nycaccidents_clean.2$BOROUGH)
+```
+
+```{r}
+nycaccidents_clean.2 %>% 
+  group_by(BOROUGH) %>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED))
+```
+
+
+
+
+See the distribution of 0 and 1
+```{r}
+table(nycaccidents_clean.2$INJURED.OR.KILLED)
+```
+The ratio did not change too much. ??
+```{r}
+50006/(18579 + 50006)
+```
+
+
+
+try to see if vehicle type makes any contribution to the injury rate difference
+```{r}
+nycaccidents_clean.2 %>% 
+  group_by(VEHICLE.TYPE.CODE.1) %>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED))
+```
+
+```{r}
+nycaccidents_clean.2 %>% 
+  group_by(VEHICLE.TYPE.CODE.2) %>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED))
+```
+
+try to see if contributing factor makes any contribution to the injury rate difference
+```{r}
+nycaccidents_clean.2 %>% 
+  group_by(CONTRIBUTING.FACTOR.VEHICLE.1) %>% 
+  summarize(injury_rate = mean(INJURED.OR.KILLED))
+```
+
+
+```{r}
+nycaccidents_modeling = nycaccidents_clean.2[,c("HOUR","MONTH","LONGITUDE","LATITUDE","CONTRIBUTING.FACTOR.VEHICLE.1","CONTRIBUTING.FACTOR.VEHICLE.2","CONTRIBUTING.FACTOR.VEHICLE.3","CONTRIBUTING.FACTOR.VEHICLE.4","CONTRIBUTING.FACTOR.VEHICLE.5","VEHICLE.TYPE.CODE.1","VEHICLE.TYPE.CODE.2","VEHICLE.TYPE.CODE.3","VEHICLE.TYPE.CODE.4","VEHICLE.TYPE.CODE.5","INJURED.OR.KILLED")]
+#nycaccidents_modeling$LOCATION.CLUSTER = factor(nycaccidents_modeling$LOCATION.CLUSTER)
+nycaccidents_modeling$HOUR_s = scale(nycaccidents_modeling$HOUR)
+nycaccidents_modeling$MONTH_s = scale(nycaccidents_modeling$MONTH)
+nycaccidents_modeling$LONGITUDE_s = scale(nycaccidents_modeling$LONGITUDE)
+nycaccidents_modeling$LATITUDE_s = scale(nycaccidents_modeling$LATITUDE)
+nycaccidents_modeling <- nycaccidents_modeling %>%
+  select(HOUR_s,MONTH_s,LONGITUDE_s,LATITUDE_s,everything()) %>% 
+  select(-c(HOUR:LATITUDE))
+nycaccidents_modeling
+```
+
+```{r}
+unique(nycaccidents_modeling$CONTRIBUTING.FACTOR.VEHICLE.1)
+```
+
+```{r}
+all(!is.na(nycaccidents_modeling$VEHICLE.TYPE.CODE.1))
+```
+
+
+One hot encoding:
+```{r}
+library(caret)
+```
+
+```{r}
+dmy <- dummyVars("~.", data = nycaccidents_modeling, fullRank=T)
+trsf <- data.frame(predict(dmy, newdata = nycaccidents_modeling))
+trsf$INJURED.OR.KILLED = factor(trsf$INJURED.OR.KILLED)
+```
+
+```{r}
+glimpse(trsf)
+```
+
+
+use Downsampling to make a balanced dataset
+```{r}
+trsf = downSample(x=trsf[,-ncol(trsf)],
+                           y=trsf$INJURED.OR.KILLED)
+```
+
+```{r}
+table(trsf$Class)
+```
+
+
+split the data into testing and training data:
+shuffle the data:
+```{r}
+set.seed(1234)
+trsf<- trsf[sample(1:nrow(trsf)), ]
+```
+
+split features and labels
+```{r}
+features = trsf[,c(-211)]
+label = as_tibble(as.numeric(trsf[,c(211)])-1)
+```
+
+split the data:
+```{r}
+# get the numb 70/30 training test split
+numberOfTrainingSamples <- round(nrow(label) * .7)
+
+# training data
+idx = 1:numberOfTrainingSamples
+train_data <- features[idx, ]
+train_labels <- label[idx,]
+
+# testing data
+test_data <- features[-idx,]
+test_labels <- label[-idx,]
+```
+
+
+
+try to use XGBoost (decision tree):
+```{r}
+library(xgboost) # for XGBoost
+```
+
+```{r}
+train_data.2 = data.matrix(train_data)
+train_labels.2 = data.matrix(train_labels)
+
+test_data.2 = data.matrix(test_data)
+test_labels.2 = data.matrix(test_labels)
+```
+
+```{r}
+dtrain <- xgb.DMatrix(data = train_data.2, label= train_labels.2)
+dtest <- xgb.DMatrix(data = test_data.2, label= test_labels.2)
+```
+
+hyperparameter tuning
+```{r}
+params1 = list(booster = "gbtree", objective = "binary:logistic", eta=0.05, gamma=0, max_depth=10, subsample=0.25, eval_metric = "error")
+xgbcv1 <- xgb.cv( params = params, data = dtrain, nrounds = 100, nfold = 5, showsd = T, stratified = T, print_every_n = 10, early_stop_round = 20, maximize = F)
+```
+
+```{r}
+params2 = list(booster = "gbtree", objective = "binary:logistic", eta=0.1, gamma=0, max_depth=10, subsample=0.25, eval_metric = "error")
+xgbcv2 <- xgb.cv( params = params, data = dtrain, nrounds = 100, nfold = 5, showsd = T, stratified = T, print_every_n = 10, early_stop_round = 20, maximize = F)
+```
+
+```{r}
+params3 = list(booster = "gbtree", objective = "binary:logistic", eta=0.2, gamma=0, max_depth=10, subsample=0.25, eval_metric = "error")
+xgbcv3 <- xgb.cv( params = params, data = dtrain, nrounds = 100, nfold = 5, showsd = T, stratified = T, print_every_n = 10, early_stop_round = 20, maximize = F)
+```
+
+```{r}
+params4 = list(booster = "gbtree", objective = "binary:logistic", eta=0.4, gamma=0, max_depth=10, subsample=0.25, eval_metric = "error")
+xgbcv4 <- xgb.cv( params = params, data = dtrain, nrounds = 100, nfold = 5, showsd = T, stratified = T, print_every_n = 10, early_stop_round = 20, maximize = F)
+```
+
+```{r}
+params5 = list(booster = "gbtree", objective = "binary:logistic", eta=0.1, gamma=0, max_depth=6, subsample=0.25, eval_metric = "error")
+xgbcv5 <- xgb.cv( params = params, data = dtrain, nrounds = 100, nfold = 5, showsd = T, stratified = T, print_every_n = 10, early_stop_round = 20, maximize = F)
+```
+
+
+```{r}
+params5 = list(booster = "gbtree", objective = "binary:logistic", eta=0.1, gamma=0, max_depth=10, subsample=0.5, eval_metric = "error")
+xgbcv5 <- xgb.cv( params = params, data = dtrain, nrounds = 100, nfold = 5, showsd = T, stratified = T, print_every_n = 10, early_stop_round = 20, maximize = F)
+```
+
+```{r}
+params7 = list(booster = "gbtree", objective = "binary:logistic", eta=0.1, gamma=0, max_depth=10, subsample=0.75, eval_metric = "error")
+xgbcv7 <- xgb.cv( params = params, data = dtrain, nrounds = 100, nfold = 5, showsd = T, stratified = T, print_every_n = 10, early_stop_round = 20, maximize = F)
+```
+
+```{r}
+model.xgb <- xgboost(data = dtrain, # the data   
+                 nround = 64, # max number of boosting iterations
+                 eta = 0.1,
+                 max_depth = 10,
+                 subsample = 0.25,
+                 gamma = 0,
+                 objective = "binary:logistic",
+                 eval_metric = "error")  # the objective function
+```
+
+
+```{r}
+# generate predictions for our held-out testing data
+pred.xg <- predict(model.xgb, dtest)
+pred.xg = ifelse(pred.xg > 0.5, "1", "0")
+# get & print the classification error
+err <- mean(as.numeric(pred.xg > 0.5) != test_labels)
+print(paste("test-error=", err))
+print(paste("test-accuracy=", 1-err))
+```
+
+```{r}
+pred = as.factor(pred.xg)
+label = as.factor(test_labels$value)
+confusionMatrix(pred, label, positive = "1")
+```
+
+```{r}
+importance_matrix = xgb.importance(colnames(dtrain), model = model.xgb)
+importance_matrix
+```
+
+```{r}
+xgb.plot.importance(importance_matrix[1:28,], left_margin = 15)
+```
+
+Use the Logistic Regression with penalty terms (LASSO and Ridge):
+```{r}
+library(glmnet)
+```
+
+```{r}
+set.seed(216)
+cvmod.0=cv.glmnet(y=as.factor(train_labels.2),x=train_data.2,alpha=0,
+                  family="binomial",type.measure="class")
+set.seed(216)
+cvmod.25=cv.glmnet(y=as.factor(train_labels.2),x=train_data.2,alpha=0.25,
+                   family="binomial",type.measure="class")
+set.seed(216)
+cvmod.5=cv.glmnet(y=as.factor(train_labels.2),x=train_data.2,alpha=0.5,
+                  family="binomial",type.measure="class")
+set.seed(216)
+cvmod.75=cv.glmnet(y=as.factor(train_labels.2),x=train_data.2,alpha=0.75,
+                   family="binomial",type.measure="class")
+set.seed(216)
+cvmod.1=cv.glmnet(y=as.factor(train_labels.2),x=train_data.2,alpha=1,
+                  family="binomial",type.measure="class")
+
+CV.0.ERROR=cvmod.0$cvm[which(cvmod.0$lambda==cvmod.0$lambda.1se)]
+CV.25.ERROR=cvmod.25$cvm[which(cvmod.25$lambda==cvmod.25$lambda.1se)]
+CV.5.ERROR=cvmod.5$cvm[which(cvmod.5$lambda==cvmod.5$lambda.1se)]
+CV.75.ERROR=cvmod.75$cvm[which(cvmod.75$lambda==cvmod.75$lambda.1se)]
+CV.1.ERROR=cvmod.1$cvm[which(cvmod.1$lambda==cvmod.1$lambda.1se)]
+
+MOD.RESULT=tibble(alpha=c(0,0.25,0.5,0.75,1),
+                  lambda=c(cvmod.0$lambda.1se,cvmod.25$lambda.1se,
+                           cvmod.5$lambda.1se,cvmod.75$lambda.1se,
+                           cvmod.1$lambda.1se),
+                  CV.Error=c(CV.0.ERROR,CV.25.ERROR,CV.5.ERROR,
+                             CV.75.ERROR,CV.1.ERROR))
+print(MOD.RESULT)
+```
+
+
+```{r}
+best.alpha=MOD.RESULT$alpha[which.min(MOD.RESULT$CV.Error)]
+best.lambda=MOD.RESULT$lambda[which.min(MOD.RESULT$CV.Error)]
+
+best.mod=glmnet(y=as.factor(train_labels.2),x=train_data.2,
+                nlambda=1,lambda=best.lambda,alpha=best.alpha,
+                family="binomial")
+
+
+Predict=predict(best.mod,newx=test_data.2,type="class")
+
+pred.elas = as.factor(Predict)
+label = as.factor(test_labels$value)
+confusionMatrix(pred.elas, label, positive="1")
+```
+
+```{r}
+coeff = as.matrix(abs(best.mod$beta))
+coeff[order(coeff[,1],decreasing=TRUE),]
+```
+
+
+Draw ROC curve
+```{r}
+library(ROCR)
+```
+
+```{r}
+Predict.elas=predict(best.mod,newx=test_data.2)
+pred.elas = prediction(Predict.elas,labels = test_labels.2)
+roc.elas = performance(pred.elas,"tpr","fpr")
+
+Predict.xgb =predict(model.xgb,newdata=test_data.2)
+pred.xgb = prediction(Predict.xgb,labels = test_labels.2)
+roc.xgb = performance(pred.xgb,"tpr","fpr")
+
+plot(roc.elas, col = "Red", lwd = 2)
+#plot(roc.xgb, add=TRUE, col = "Red", lwd = 2, lty=2)
+abline(a = 0, b = 1)
+legend(0.5, 0.2, legend="Logistic Regression with Regularization",
+       col="Red", lty=1, cex=0.8)
+```
+
+```{r}
+auc.elas = performance(pred.elas,"auc")
+auc = as.numeric(auc.elas@y.values)
+auc
+```
+
+
+```{r}
+save.image("FINAL_PROJECT.DRAFT.Rdata")
+```
+
+```{r}
+load("FINAL_PROJECT.DRAFT.Rdata")
+```
