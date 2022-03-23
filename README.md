@@ -17,5 +17,5 @@ The data that is used in this analysis is the NYC Traffic Accidents dataset on K
 We used a logistic regression model with penalty terms (LASSO and Ridge) to predict whether an accident would have people injured or killed given its location, time, vehicle type involved, and the contributing factors. Moreover, XGBoost are also used to fit the data to see if there is any improvement in accuracy. 
 
 ## Results: 
-The achieved prediction accuracy is 0.6743 for logistic regression model and 0.7012 for XGBoost model, compared to the No Information Rate 0.5008. The Sensitivity and Specificity is 0.6012 and 0.7471. We also plotted the ROC curve and calculated the AUC score to be 0.7469884, which indicates that our model’s performance is good.
+The achieved prediction accuracy is 0.6743 for logistic regression model and 0.7012 for XGBoost model, compared to the No Information Rate 0.5008. For the logistic regression model, the Sensitivity and Specificity is 0.6012 and 0.7471. We also plotted the ROC curve and calculated the AUC score to be 0.7469884, which indicates that our model’s performance is good. The performance of XGBoost model is similar. From the importance matrix, We can see that Longitude, Latitude, Hour, Month, and Vehicle Type of Two Wheels Vehicle contribute the top 5 most weights of our model.
 
